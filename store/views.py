@@ -973,14 +973,33 @@ class UserOrderListView(generics.ListAPIView):
 #     serializer_class = OrderSerializer
 
 
+# class OrderCreateAPIView(APIView):
+#     def post(self, request):
+#         serializer = OrderCreateSerializer(data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response({"message": "success"}, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class OrderCreateAPIView(APIView):
     def post(self, request):
+        # Check if the user is authenticated
+        if request.user and request.user.is_authenticated:
+            request.data._mutable = True
+            request.data['user'] = request.user.id  # Set the user field to the authenticated user
+            request.data._mutable = False
+        
         serializer = OrderCreateSerializer(data=request.data)
+        print(serializer)
         if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "success"}, status=status.HTTP_201_CREATED)
+            try:
+                serializer.save()
+                return Response({"message": "Order created successfully"}, status=status.HTTP_201_CREATED)
+            except Exception as e:
+                return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    
 
 class OrderUpdateAPIView(APIView):
     def put(self, request, pk):

@@ -361,26 +361,53 @@ class OrderSerializer(serializers.ModelSerializer):
         ]
 
 
+# class OrderItemCreateSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = OrderItem
+#         fields = ["id", "product", "quantity", "price", "color", "size"]
+
+
+# class OrderCreateSerializer(serializers.ModelSerializer):
+#     items = OrderItemCreateSerializer(many=True, write_only=True)
+
+#     def create(self, validated_data):
+#         order_items_data = validated_data.pop("items")
+#         order = Order.objects.create(**validated_data)
+#         for order_item_data in order_items_data:
+#             OrderItem.objects.create(order=order, **order_item_data)
+#         return order
+
+#     class Meta:
+#         model = Order
+#         fields = [
+#             "id",
+#             "user",
+#             "store",
+#             "tel",
+#             "total_prices",
+#             "account_name",
+#             "province",
+#             "district",
+#             "shipping_company",
+#             "branch",
+#             "created_at",
+#             "status",
+#             "items",
+#         ]
+
+
 class OrderItemCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
-        fields = ["id", "product", "quantity", "price", "color", "size"]
-
+        fields = ["product", "quantity", "price", "color", "size"]
 
 class OrderCreateSerializer(serializers.ModelSerializer):
     items = OrderItemCreateSerializer(many=True, write_only=True)
-
-    def create(self, validated_data):
-        order_items_data = validated_data.pop("items")
-        order = Order.objects.create(**validated_data)
-        for order_item_data in order_items_data:
-            OrderItem.objects.create(order=order, **order_item_data)
-        return order
+    user = serializers.PrimaryKeyRelatedField(queryset=UserModel.objects.all(), required=False, allow_null=True)
 
     class Meta:
         model = Order
         fields = [
-            "id",
             "user",
             "store",
             "tel",
@@ -390,10 +417,26 @@ class OrderCreateSerializer(serializers.ModelSerializer):
             "district",
             "shipping_company",
             "branch",
-            "created_at",
             "status",
             "items",
         ]
+
+    def validate(self, data):
+        items = data.get('items')
+        if not items:
+            raise serializers.ValidationError("At least one order item is required.")
+        if data.get('total_prices') <= 0:
+            raise serializers.ValidationError("Total prices must be greater than zero.")
+        # Additional validations as needed
+        return data
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('items')
+        # Do not handle 'user' field here
+        order = Order.objects.create(**validated_data)
+        order_items = [OrderItem(order=order, **item) for item in items_data]
+        OrderItem.objects.bulk_create(order_items)
+        return order
 
 
 class PendingOrderSerializer(OrderSerializer):

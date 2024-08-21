@@ -144,7 +144,7 @@ class Order(models.Model):
         ("Cancelled", "Cancelled"),
     )
 
-    user = models.ForeignKey(UserModel, on_delete=models.CASCADE)
+    user = models.ForeignKey(UserModel, on_delete=models.SET_NULL, null=True, blank=True)
     store = models.ForeignKey(
         StoreModel,
         on_delete=models.CASCADE,
@@ -166,7 +166,7 @@ class Order(models.Model):
     order_bill = models.ImageField(upload_to="media/", null=True, blank=True)
 
     def __str__(self):
-        return f"Order {self.pk} - User: {self.user.email}, Status: {self.status}"
+        return f"Order {self.pk} - User: {self.user.email if self.user else 'Guest'}, Total: {self.total_prices}, Status: {self.status}"
 
 
 class OrderItem(models.Model):
